@@ -12,11 +12,9 @@ deploy_stun_server_config() {
 	do
 		if [ "$1" != "all" ] && [ "$1" != "$i" ] ; then continue; fi
 		printf "\nuploading to [$i]\n"
-		ssh $i sudo apt install -y sqlite3 docker.io
 		ssh $i "sudo mkdir -p $INSTALL_DIR/cert && sudo chmod -R 777 $INSTALL_DIR \
 		        && sudo chmod -R 777 $INSTALL_DIR"
 		scp * $i:$INSTALL_DIR
-		scp cert/* $i:$INSTALL_DIR/cert
 		ssh $i "sudo chown -R root.root $INSTALL_DIR"
 		done
 }

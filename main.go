@@ -13,8 +13,38 @@ import (
 	"strconv"
 	"syscall"
 
+	"github.com/pion/stun/v2"
 	"github.com/pion/turn/v3"
 )
+
+type stunLogger struct {
+	net.PacketConn
+}
+
+func (s *stunLogger) ReadFrom(p []byte) (n int, addr net.Addr, err error) {
+	if n, addr, err = s.PacketConn.ReadFrom(p); err == nil && stun.IsMessage(p) {
+		msg := &stun.Message{Raw: p}
+		if err = msg.Decode(); err != nil {
+			return
+		}
+
+		log.Printf("Inbound[%v] STUN: %s \n", addr, msg.String())
+	}
+	return
+}
+
+func (s *stunLogger) WriteTo(p []byte, addr net.Addr) (n int, err error) {
+	if n, err = s.PacketConn.WriteTo(p, addr); err == nil && stun.IsMessage(p) {
+		msg := &stun.Message{Raw: p}
+		if err = msg.Decode(); err != nil {
+			return
+		}
+
+		log.Printf("Outbound[%v] STUN: %s \n", addr,  msg.String())
+	}
+
+	return
+}
 
 func main() {
 	publicIP := flag.String("public-ip", "", "IP Address that STUN can be contacted by.")
@@ -32,12 +62,12 @@ func main() {
 	if err != nil {
 		log.Panicf("Failed to create STUN server listener: %s", err)
 	}
-
+	log.Printf("STUN server started %s:%d\n", *publicIP, *port)
 	s, err := turn.NewServer(turn.ServerConfig{
 		// PacketConnConfigs is a list of UDP Listeners and the configuration around them
 		PacketConnConfigs: []turn.PacketConnConfig{
 			{
-				PacketConn: udpListener,
+				PacketConn: &stunLogger{udpListener},
 			},
 		},
 	})
