@@ -8,5 +8,6 @@ docker rm ${CONTAINER}
 docker run -d --net=host \
               --name=${CONTAINER} \
               --env-file ${CONTAINER}.env \
+	      --restart=always \
 	      ${IMAGE}
               # tail -f /dev/null
